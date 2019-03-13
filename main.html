@@ -1,0 +1,197 @@
+<html>
+<body>
+<canvas id="myCanvas" style="border:4px solid black"></canvas>
+<script>
+	function vector(x = 0,y = 0,z = 0){
+		this.x = x;
+		this.y = y;
+		this.z = z;
+		this.size = Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+	};
+
+	vector.sum = function(v1,v2){
+		return new vector(v1.x + v2.x,v1.y + v2.y,v1.z + v2.z);//toplama
+	}
+
+	vector.ex = function(v1,v2){
+		return new vector(v1.x - v2.x,v1.y - v2.y,v1.z - v2.z);//çıkarma
+	}
+
+	vector.skaler = function(v1,v2){
+		return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;//skaler çarpım
+	}
+
+	vector.vectoral = function(v1,v2){
+		var new_x = v1.y * v2.z - v1.z * v2.y;//vektörel çarpım
+		var new_y = v1.z * v2.x - v1.x * v2.z;
+		var new_z = v1.x * v2.y - v1.y * v2.x;
+		return new vector(new_x,new_y,new_z);
+	}
+
+	vector.prototype.get = function(n) {
+		return new vector(this.x * n,this.y * n,this.z * n);//skaler sayı ile çarpım
+	}
+
+	vector.prototype.unit = function(){
+		return this.get(1 / this.size);//birim vektörünü alma
+	}
+
+	vector.prototype.negative = function(){
+		return this.get(-1);//yönünü değiştirme
+	}
+
+	vector.prototype.res = function(v2){
+		return vector.ex(this,v2.unit().get(vector.skaler(this,v2.unit())));//başka bir vektör doğrultusunda bileşenini alma
+	}
+
+	function person(){
+		this.position = new vector(-500,0,0);
+		this.camera = new vector(4,0,0);
+		this.rightArm = new vector(0,1,0);
+		this.legs = new vector(0,0,-1);
+	}
+
+	person.prototype.transformPoint = function(v1){
+		var v2 = vector.ex(v1,this.position);//orijini burak'ın gözlerine ötele.
+		var distance = v2.size;//burak ile nokta arası mesafe
+		if(vector.skaler(v2,this.camera) > 0){  
+			var x = vector.skaler(v2,this.rightArm);;
+			var y = vector.skaler(v2,this.legs);
+			return new vector(x,y,distance);//burak'ın gözlerinden noktanın görüntüsü
+		}else{
+			return null; //eğer nokta burak'ın arkasında kalıyorsa
+		}
+	}
+
+	person.prototype.move = function(direction){
+		switch(direction || "next"){
+			case "next" : this.position = vector.sum(this.position,this.camera);break;
+			case "back" : this.position = vector.ex(this.position,this.camera);break;
+		}
+	}
+
+	person.prototype.turn = function(axis,ang){
+		this.rotate(axis,ang,this.camera);
+		this.rotate(axis,ang,this.legs);
+		this.rotate(axis,ang,this.rightArm);
+	}
+	
+	person.prototype.rotate = function(axis,ang,v1){
+		var x = v1.x;
+		var y = v1.y;
+		var z = v1.z;
+		switch(axis){
+			case "x" : 
+				v1.y = y*Math.cos(ang) - z*Math.sin(ang);
+				v1.z = y*Math.sin(ang) + z*Math.cos(ang);
+				break;
+			case "y" :
+				v1.x = x*Math.cos(ang) - z*Math.sin(ang);
+				v1.z = x*Math.sin(ang) + z*Math.cos(ang);
+				break;
+			case "z" : 
+				v1.x = x*Math.cos(ang) - y*Math.sin(ang);
+				v1.y = x*Math.sin(ang) + y*Math.cos(ang);
+				break;
+		}
+	}
+
+
+	function myfunction(size){
+		this.coords = [];
+		for(i = 0;i < size;i++){
+			this.coords[i] = new Array(size);
+			for(j = 0;j < size;j++){
+				var x = i*5;
+				var y = j*5;
+				var z = 10*Math.sin(x/10) + 10*Math.cos(y/10);
+				this.coords[i][j] = new vector(x,y,z);
+			}
+		}
+	        //döndürme fonksiyonu
+	        this.rotate = function(type,angle){
+			for(i = 0;i < this.coords.length;i++){
+				for(j = 0;j < this.coords[i].length;j++){
+					var v = this.coords[i][j];
+					var x = v.x;
+					var y = v.y;
+					var z = v.z;
+					switch(type){
+						case "x" :
+						v.y = y*Math.cos(angle) - z*Math.sin(angle);
+						v.z = y*Math.sin(angle) + z*Math.cos(angle);
+						break;
+						case "y" :
+						v.x = x*Math.cos(angle) - z*Math.sin(angle);
+						v.z = x*Math.sin(angle) + z*Math.cos(angle);
+						break;
+						case "z" :
+						v.x = x*Math.cos(angle) - y*Math.sin(angle);
+						v.y = x*Math.sin(angle) + y*Math.cos(angle);
+				 		break;
+					}
+			   	}
+			}
+	     	}
+	}
+
+	var myfunc = new myfunction(60,document.getElementById("myCanvas"));
+	var burak = new person();
+	window.onkeydown = function(e){
+		switch(e.keyCode){
+			case 87 : burak.move("next");break;
+			case 83 : burak.move("back");break;
+			case 65 : burak.turn("z",-Math.PI/24);break;
+			case 68 : burak.turn("z",Math.PI/24);break;
+			case 81 : burak.turn("y",Math.PI/24);break;
+			case 69 : burak.turn("y",-Math.PI/24);break;
+			case 82 : burak.turn("x",Math.PI/24);break;
+			case 70 : burak.turn("x",-Math.PI/24);break;
+			//case 32 : if(player.onGround || player.type == "god")player.velocity.z+=0.2;break;
+		}
+	}
+
+	function animate(myfunc,person){
+		var c = document.getElementById("myCanvas");
+		c.width = innerWidth;
+		c.height = innerHeight;
+		var ctx = c.getContext("2d");
+		ctx.beginPath();
+		ctx.clearRect(0,0,c.width,c.height);
+	   	ctx.translate(c.width / 2,c.height / 2);
+
+		for(i = 0;i < myfunc.coords.length;i++){
+			ctx.beginPath();
+			for(j = 0;j < myfunc.coords[i].length;j++){
+				var v = person.transformPoint(myfunc.coords[i][j]);
+				if(v != null){
+					ctx.lineTo(v.x*innerWidth / v.z,v.y*innerWidth / v.z);
+				}else{
+					ctx.stroke();
+					ctx.beginPath();
+				}
+			}
+			ctx.stroke();
+		}
+
+		for(i = 0;i < myfunc.coords[0].length;i++){
+			ctx.beginPath();
+			for(j = 0;j < myfunc.coords.length;j++){
+				var v = person.transformPoint(myfunc.coords[j][i]);
+				if(v != null){
+					ctx.lineTo(v.x*innerWidth / v.z,v.y*innerWidth / v.z);
+				}else{
+					ctx.stroke();
+					ctx.beginPath();
+				}
+			}
+			ctx.stroke();
+		}
+
+	ctx.stroke();
+	ctx.resetTransform();
+	}
+	setInterval(function(){animate(myfunc,burak)},30);
+</script>
+</body>
+</html>
